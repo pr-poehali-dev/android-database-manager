@@ -1,84 +1,99 @@
 import { useState, useMemo } from "react";
 import Icon from "@/components/ui/icon";
 
-type Category = "Все" | "Контакты" | "Товары" | "Задачи" | "Заметки";
-
-interface DBRecord {
+interface DSERecord {
   id: number;
-  title: string;
-  subtitle: string;
-  category: string;
-  date: string;
-  tags: string[];
+  number: string;
+  designation: string;
+  name: string;
+  grade: number | "";
+  hours: number | "";
 }
 
-const INITIAL_RECORDS: DBRecord[] = [
-  { id: 1, title: "Иванов Иван Иванович", subtitle: "ivan@example.com · +7 900 123-45-67", category: "Контакты", date: "10.06.2026", tags: ["VIP", "Клиент"] },
-  { id: 2, title: "Ноутбук Dell XPS 15", subtitle: "Артикул: DX-9500 · Склад: A3", category: "Товары", date: "09.06.2026", tags: ["Электроника"] },
-  { id: 3, title: "Подготовить квартальный отчёт", subtitle: "Срок: 15 июня · Ответственный: Смирнов", category: "Задачи", date: "08.06.2026", tags: ["Срочно"] },
-  { id: 4, title: "Петрова Мария Сергеевна", subtitle: "maria@corp.ru · +7 912 000-11-22", category: "Контакты", date: "07.06.2026", tags: ["Партнёр"] },
-  { id: 5, title: "Идеи для нового продукта", subtitle: "Встреча команды 12.06 — собрать предложения", category: "Заметки", date: "06.06.2026", tags: ["Идеи"] },
-  { id: 6, title: "Офисное кресло Herman Miller", subtitle: "Артикул: HM-Aeron · Цена: 85 000 ₽", category: "Товары", date: "05.06.2026", tags: ["Мебель", "Офис"] },
-  { id: 7, title: "Обновить сайт компании", subtitle: "Дизайн + новый раздел услуг", category: "Задачи", date: "04.06.2026", tags: ["В работе"] },
-  { id: 8, title: "Сидоров Алексей", subtitle: "a.sidorov@mail.ru · Директор", category: "Контакты", date: "03.06.2026", tags: ["Руководство"] },
+const INITIAL_RECORDS: DSERecord[] = [
+  { id: 1, number: "001", designation: "ДСЕ-001.00.00", name: "Корпус редуктора", grade: 5, hours: 12.5 },
+  { id: 2, number: "002", designation: "ДСЕ-002.00.00", name: "Вал приводной", grade: 4, hours: 8.0 },
+  { id: 3, number: "003", designation: "ДСЕ-003.00.00", name: "Шестерня ведущая", grade: 6, hours: 15.75 },
+  { id: 4, number: "004", designation: "ДСЕ-004.00.00", name: "Крышка подшипника", grade: 3, hours: 4.5 },
+  { id: 5, number: "005", designation: "ДСЕ-005.00.00", name: "Фланец соединительный", grade: 5, hours: 6.0 },
+  { id: 6, number: "006", designation: "ДСЕ-006.00.00", name: "Кронштейн опорный", grade: 4, hours: 9.25 },
+  { id: 7, number: "007", designation: "ДСЕ-007.00.00", name: "Втулка направляющая", grade: 3, hours: 3.0 },
+  { id: 8, number: "008", designation: "ДСЕ-008.00.00", name: "Плита основания", grade: 6, hours: 22.0 },
 ];
 
-const CATEGORY_COLORS: Record<string, string> = {
-  "Контакты": "text-blue-400 bg-blue-400/10",
-  "Товары":   "text-emerald-400 bg-emerald-400/10",
-  "Задачи":   "text-amber-400 bg-amber-400/10",
-  "Заметки":  "text-purple-400 bg-purple-400/10",
+const EMPTY_FORM: Omit<DSERecord, "id"> = {
+  number: "",
+  designation: "",
+  name: "",
+  grade: "",
+  hours: "",
 };
 
-const CATEGORY_ICONS: Record<string, string> = {
-  "Контакты": "User",
-  "Товары":   "Package",
-  "Задачи":   "CheckSquare",
-  "Заметки":  "FileText",
+const GRADE_COLOR: Record<number, string> = {
+  1: "bg-slate-500/15 text-slate-400",
+  2: "bg-blue-500/15 text-blue-400",
+  3: "bg-cyan-500/15 text-cyan-400",
+  4: "bg-green-500/15 text-green-400",
+  5: "bg-amber-500/15 text-amber-400",
+  6: "bg-orange-500/15 text-orange-400",
+  7: "bg-red-500/15 text-red-400",
+  8: "bg-purple-500/15 text-purple-400",
 };
 
-const CATEGORIES: Category[] = ["Все", "Контакты", "Товары", "Задачи", "Заметки"];
-
-const EMPTY_FORM = { title: "", subtitle: "", category: "Заметки", tags: "" };
+type SortKey = keyof DSERecord;
+type SortDir = "asc" | "desc";
 
 export default function Index() {
-  const [records, setRecords] = useState<DBRecord[]>(INITIAL_RECORDS);
+  const [records, setRecords] = useState<DSERecord[]>(INITIAL_RECORDS);
   const [search, setSearch] = useState("");
-  const [activeCategory, setActiveCategory] = useState<Category>("Все");
   const [showForm, setShowForm] = useState(false);
-  const [form, setForm] = useState(EMPTY_FORM);
+  const [form, setForm] = useState<Omit<DSERecord, "id">>(EMPTY_FORM);
   const [detailId, setDetailId] = useState<number | null>(null);
   const [deleteId, setDeleteId] = useState<number | null>(null);
+  const [sortKey, setSortKey] = useState<SortKey>("number");
+  const [sortDir, setSortDir] = useState<SortDir>("asc");
+  const [gradeFilter, setGradeFilter] = useState<number | "">("");
 
   const filtered = useMemo(() => {
-    return records.filter((r) => {
-      const matchCat = activeCategory === "Все" || r.category === activeCategory;
+    let result = records.filter((r) => {
       const q = search.toLowerCase();
       const matchSearch =
         !q ||
-        r.title.toLowerCase().includes(q) ||
-        r.subtitle.toLowerCase().includes(q) ||
-        r.tags.some((t) => t.toLowerCase().includes(q));
-      return matchCat && matchSearch;
+        r.number.toLowerCase().includes(q) ||
+        r.designation.toLowerCase().includes(q) ||
+        r.name.toLowerCase().includes(q);
+      const matchGrade = gradeFilter === "" || r.grade === gradeFilter;
+      return matchSearch && matchGrade;
     });
-  }, [records, search, activeCategory]);
+    result = [...result].sort((a, b) => {
+      const av = a[sortKey];
+      const bv = b[sortKey];
+      if (av === "" || av === undefined) return 1;
+      if (bv === "" || bv === undefined) return -1;
+      const cmp = av < bv ? -1 : av > bv ? 1 : 0;
+      return sortDir === "asc" ? cmp : -cmp;
+    });
+    return result;
+  }, [records, search, gradeFilter, sortKey, sortDir]);
 
   const detailRecord = records.find((r) => r.id === detailId) ?? null;
 
+  function toggleSort(key: SortKey) {
+    if (sortKey === key) setSortDir((d) => (d === "asc" ? "desc" : "asc"));
+    else { setSortKey(key); setSortDir("asc"); }
+  }
+
   function handleAdd() {
-    if (!form.title.trim()) return;
-    const tags = form.tags.split(",").map((t) => t.trim()).filter(Boolean);
-    const today = new Date();
-    const date = `${String(today.getDate()).padStart(2, "0")}.${String(today.getMonth() + 1).padStart(2, "0")}.${today.getFullYear()}`;
-    const newRecord: DBRecord = {
+    if (!form.number.trim() || !form.name.trim()) return;
+    const newRecord: DSERecord = {
       id: Date.now(),
-      title: form.title.trim(),
-      subtitle: form.subtitle.trim(),
-      category: form.category,
-      date,
-      tags,
+      number: form.number.trim(),
+      designation: form.designation.trim(),
+      name: form.name.trim(),
+      grade: form.grade === "" ? "" : Number(form.grade),
+      hours: form.hours === "" ? "" : Number(form.hours),
     };
-    setRecords((prev) => [newRecord, ...prev]);
+    setRecords((prev) => [...prev, newRecord]);
     setForm(EMPTY_FORM);
     setShowForm(false);
   }
@@ -89,108 +104,169 @@ export default function Index() {
     if (detailId === id) setDetailId(null);
   }
 
+  function SortIcon({ col }: { col: SortKey }) {
+    if (sortKey !== col) return <Icon name="ChevronsUpDown" size={12} className="text-muted-foreground/40" />;
+    return sortDir === "asc"
+      ? <Icon name="ChevronUp" size={12} className="text-primary" />
+      : <Icon name="ChevronDown" size={12} className="text-primary" />;
+  }
+
   return (
     <div className="min-h-screen bg-background flex flex-col" style={{ fontFamily: "'Golos Text', sans-serif" }}>
       {/* Header */}
-      <header className="sticky top-0 z-30 border-b border-border bg-background/90 backdrop-blur-md">
-        <div className="max-w-2xl mx-auto px-4 pt-5 pb-3">
-          <div className="flex items-center justify-between mb-4">
+      <header className="sticky top-0 z-30 border-b border-border bg-background/95 backdrop-blur-md">
+        <div className="px-4 pt-4 pb-3">
+          <div className="flex items-center justify-between mb-3">
             <div>
-              <h1 className="text-xl font-bold text-foreground leading-tight">База данных</h1>
+              <h1 className="text-lg font-bold text-foreground leading-tight">ДСЕ — Нормирование</h1>
               <p className="text-xs text-muted-foreground mt-0.5">{records.length} записей</p>
             </div>
             <button
               onClick={() => setShowForm(true)}
-              className="flex items-center gap-2 bg-primary text-primary-foreground rounded-xl px-4 py-2 text-sm font-semibold hover:opacity-90 active:scale-95 transition-all"
+              className="flex items-center gap-1.5 bg-primary text-primary-foreground rounded-xl px-3.5 py-2 text-sm font-semibold hover:opacity-90 active:scale-95 transition-all"
             >
-              <Icon name="Plus" size={16} />
+              <Icon name="Plus" size={15} />
               Добавить
             </button>
           </div>
 
-          {/* Search */}
-          <div className="relative mb-3">
-            <Icon name="Search" size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none" />
-            <input
-              type="text"
-              placeholder="Поиск по названию, описанию, тегам..."
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              className="w-full bg-muted border border-border rounded-xl pl-9 pr-4 py-2.5 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all"
-            />
-            {search && (
-              <button onClick={() => setSearch("")} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground">
-                <Icon name="X" size={14} />
-              </button>
-            )}
-          </div>
-
-          {/* Category tabs */}
-          <div className="flex gap-2 overflow-x-auto pb-1">
-            {CATEGORIES.map((cat) => (
-              <button
-                key={cat}
-                onClick={() => setActiveCategory(cat)}
-                className={`flex-shrink-0 rounded-lg px-3 py-1.5 text-xs font-semibold transition-all ${
-                  activeCategory === cat
-                    ? "bg-primary text-primary-foreground"
-                    : "bg-muted text-muted-foreground hover:text-foreground hover:bg-secondary"
-                }`}
-              >
-                {cat}
-              </button>
-            ))}
+          {/* Search + Filter */}
+          <div className="flex gap-2">
+            <div className="relative flex-1">
+              <Icon name="Search" size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none" />
+              <input
+                type="text"
+                placeholder="Поиск по обозначению, наименованию..."
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                className="w-full bg-muted border border-border rounded-xl pl-9 pr-4 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all"
+              />
+              {search && (
+                <button onClick={() => setSearch("")} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground">
+                  <Icon name="X" size={13} />
+                </button>
+              )}
+            </div>
+            <select
+              value={gradeFilter}
+              onChange={(e) => setGradeFilter(e.target.value === "" ? "" : Number(e.target.value))}
+              className="bg-muted border border-border rounded-xl px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all appearance-none cursor-pointer min-w-[110px]"
+            >
+              <option value="">Все разряды</option>
+              {[1,2,3,4,5,6,7,8].map((g) => (
+                <option key={g} value={g}>{g} разряд</option>
+              ))}
+            </select>
           </div>
         </div>
       </header>
 
-      {/* List */}
-      <main className="flex-1 max-w-2xl mx-auto w-full px-4 py-4 space-y-2">
+      {/* Table */}
+      <main className="flex-1 overflow-x-auto">
         {filtered.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-20 text-center animate-fade-in">
+          <div className="flex flex-col items-center justify-center py-20 text-center animate-fade-in px-4">
             <div className="w-16 h-16 rounded-2xl bg-muted flex items-center justify-center mb-4">
-              <Icon name="Database" size={28} className="text-muted-foreground" />
+              <Icon name="TableProperties" size={28} className="text-muted-foreground" />
             </div>
             <p className="text-muted-foreground text-sm">Записи не найдены</p>
-            {search && (
-              <button onClick={() => setSearch("")} className="mt-3 text-primary text-sm hover:underline">
-                Сбросить поиск
+            {(search || gradeFilter !== "") && (
+              <button onClick={() => { setSearch(""); setGradeFilter(""); }} className="mt-3 text-primary text-sm hover:underline">
+                Сбросить фильтры
               </button>
             )}
           </div>
         ) : (
-          filtered.map((record, i) => (
-            <div
-              key={record.id}
-              className="bg-card border border-border rounded-2xl px-4 py-3.5 cursor-pointer hover:border-primary/40 transition-all animate-fade-in"
-              style={{ animationDelay: `${i * 40}ms` }}
-              onClick={() => setDetailId(record.id)}
-            >
-              <div className="flex items-start gap-3">
-                <div className={`mt-0.5 flex-shrink-0 w-9 h-9 rounded-xl flex items-center justify-center ${CATEGORY_COLORS[record.category] ?? "text-muted-foreground bg-muted"}`}>
-                  <Icon name={CATEGORY_ICONS[record.category] ?? "File"} fallback="File" size={17} />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-start justify-between gap-2">
-                    <p className="font-semibold text-sm text-foreground leading-tight truncate">{record.title}</p>
-                    <span className="flex-shrink-0 text-xs text-muted-foreground">{record.date}</span>
-                  </div>
-                  {record.subtitle && (
-                    <p className="text-xs text-muted-foreground mt-0.5 truncate">{record.subtitle}</p>
-                  )}
-                  {record.tags.length > 0 && (
-                    <div className="flex flex-wrap gap-1 mt-2">
-                      {record.tags.map((tag) => (
-                        <span key={tag} className="bg-primary/10 text-primary rounded-md px-2 py-0.5 text-xs font-medium">
-                          {tag}
-                        </span>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              </div>
-            </div>
-          ))
+          <table className="w-full min-w-[600px] text-sm">
+            <thead className="sticky top-[105px] z-20 bg-background border-b border-border">
+              <tr>
+                {(["number", "designation", "name", "grade", "hours"] as SortKey[]).map((col, i) => {
+                  const labels: Record<string, string> = {
+                    number: "№",
+                    designation: "Обозначение ДСЕ",
+                    name: "Наименование ДСЕ",
+                    grade: "Разряд",
+                    hours: "Норма, ч",
+                  };
+                  const aligns = ["text-center", "text-left", "text-left", "text-center", "text-right"];
+                  return (
+                    <th
+                      key={col}
+                      onClick={() => toggleSort(col)}
+                      className={`px-3 py-2.5 font-semibold text-xs text-muted-foreground uppercase tracking-wide cursor-pointer select-none hover:text-foreground transition-colors ${aligns[i]}`}
+                    >
+                      <span className="inline-flex items-center gap-1">
+                        {labels[col]}
+                        <SortIcon col={col} />
+                      </span>
+                    </th>
+                  );
+                })}
+                <th className="px-3 py-2.5 w-10" />
+              </tr>
+            </thead>
+            <tbody>
+              {filtered.map((r, i) => (
+                <tr
+                  key={r.id}
+                  onClick={() => setDetailId(r.id)}
+                  className="border-b border-border/50 cursor-pointer hover:bg-card transition-colors animate-fade-in group"
+                  style={{ animationDelay: `${i * 25}ms` }}
+                >
+                  <td className="px-3 py-3 text-center text-muted-foreground font-mono text-xs w-14">
+                    {r.number}
+                  </td>
+                  <td className="px-3 py-3 text-foreground font-medium text-xs font-mono whitespace-nowrap">
+                    {r.designation || <span className="text-muted-foreground/40">—</span>}
+                  </td>
+                  <td className="px-3 py-3 text-foreground text-sm">
+                    {r.name}
+                  </td>
+                  <td className="px-3 py-3 text-center">
+                    {r.grade !== "" ? (
+                      <span className={`inline-flex items-center justify-center w-7 h-7 rounded-lg text-xs font-bold ${GRADE_COLOR[r.grade as number] ?? "bg-muted text-muted-foreground"}`}>
+                        {r.grade}
+                      </span>
+                    ) : (
+                      <span className="text-muted-foreground/40">—</span>
+                    )}
+                  </td>
+                  <td className="px-3 py-3 text-right font-mono text-sm text-foreground">
+                    {r.hours !== "" ? (
+                      <span>{Number(r.hours).toFixed(2)}</span>
+                    ) : (
+                      <span className="text-muted-foreground/40">—</span>
+                    )}
+                  </td>
+                  <td className="px-3 py-3 w-10">
+                    <button
+                      onClick={(e) => { e.stopPropagation(); setDeleteId(r.id); }}
+                      className="opacity-0 group-hover:opacity-100 text-muted-foreground hover:text-destructive transition-all"
+                    >
+                      <Icon name="Trash2" size={14} />
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+            {/* Footer totals */}
+            <tfoot className="border-t-2 border-border">
+              <tr className="bg-muted/30">
+                <td className="px-3 py-2.5 text-xs text-muted-foreground text-center" colSpan={2}>
+                  Итого: {filtered.length} поз.
+                </td>
+                <td className="px-3 py-2.5" />
+                <td className="px-3 py-2.5 text-center text-xs text-muted-foreground">
+                  {filtered.filter(r => r.grade !== "").length > 0
+                    ? `∅ ${(filtered.filter(r => r.grade !== "").reduce((s, r) => s + (r.grade as number), 0) / filtered.filter(r => r.grade !== "").length).toFixed(1)}`
+                    : "—"}
+                </td>
+                <td className="px-3 py-2.5 text-right font-mono text-sm font-bold text-foreground">
+                  {filtered.filter(r => r.hours !== "").reduce((s, r) => s + (r.hours as number), 0).toFixed(2)}
+                </td>
+                <td />
+              </tr>
+            </tfoot>
+          </table>
         )}
       </main>
 
@@ -201,41 +277,46 @@ export default function Index() {
           onClick={() => setDetailId(null)}
         >
           <div
-            className="bg-card border border-border rounded-t-3xl sm:rounded-2xl w-full max-w-lg p-6 animate-slide-up"
+            className="bg-card border border-border rounded-t-3xl sm:rounded-2xl w-full max-w-md p-6 animate-slide-up"
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="flex items-start justify-between mb-4">
-              <div className={`w-11 h-11 rounded-xl flex items-center justify-center ${CATEGORY_COLORS[detailRecord.category] ?? "text-muted-foreground bg-muted"}`}>
-                <Icon name={CATEGORY_ICONS[detailRecord.category] ?? "File"} fallback="File" size={20} />
+            <div className="flex items-center justify-between mb-5">
+              <div className="flex items-center gap-3">
+                <span className="font-mono text-xs text-muted-foreground bg-muted rounded-lg px-2 py-1">№{detailRecord.number}</span>
+                {detailRecord.grade !== "" && (
+                  <span className={`inline-flex items-center justify-center w-7 h-7 rounded-lg text-xs font-bold ${GRADE_COLOR[detailRecord.grade as number] ?? "bg-muted text-muted-foreground"}`}>
+                    {detailRecord.grade}
+                  </span>
+                )}
               </div>
               <button onClick={() => setDetailId(null)} className="text-muted-foreground hover:text-foreground transition-colors">
                 <Icon name="X" size={20} />
               </button>
             </div>
-            <h2 className="text-lg font-bold text-foreground mb-1">{detailRecord.title}</h2>
-            {detailRecord.subtitle && (
-              <p className="text-sm text-muted-foreground mb-3">{detailRecord.subtitle}</p>
+
+            <h2 className="text-base font-bold text-foreground mb-1">{detailRecord.name}</h2>
+            {detailRecord.designation && (
+              <p className="text-sm font-mono text-muted-foreground mb-4">{detailRecord.designation}</p>
             )}
-            <div className="flex items-center gap-3 mb-4 text-xs text-muted-foreground">
-              <span className={`rounded-lg px-2 py-1 font-medium ${CATEGORY_COLORS[detailRecord.category] ?? "bg-muted text-muted-foreground"}`}>
-                {detailRecord.category}
-              </span>
-              <span>{detailRecord.date}</span>
-            </div>
-            {detailRecord.tags.length > 0 && (
-              <div className="flex flex-wrap gap-1.5 mb-5">
-                {detailRecord.tags.map((tag) => (
-                  <span key={tag} className="bg-primary/10 text-primary rounded-md px-2.5 py-1 text-xs font-medium">{tag}</span>
-                ))}
+
+            <div className="grid grid-cols-2 gap-3 mb-5">
+              <div className="bg-muted rounded-xl p-3">
+                <p className="text-xs text-muted-foreground mb-1">Разряд</p>
+                <p className="text-lg font-bold text-foreground">{detailRecord.grade !== "" ? detailRecord.grade : "—"}</p>
               </div>
-            )}
+              <div className="bg-muted rounded-xl p-3">
+                <p className="text-xs text-muted-foreground mb-1">Норма часы</p>
+                <p className="text-lg font-bold text-foreground">{detailRecord.hours !== "" ? `${Number(detailRecord.hours).toFixed(2)} ч` : "—"}</p>
+              </div>
+            </div>
+
             <div className="flex gap-2 pt-4 border-t border-border">
               <button
                 onClick={() => setDeleteId(detailRecord.id)}
                 className="flex-1 flex items-center justify-center gap-2 bg-destructive/10 text-destructive rounded-xl py-2.5 text-sm font-semibold hover:bg-destructive/20 transition-all"
               >
                 <Icon name="Trash2" size={15} />
-                Удалить запись
+                Удалить
               </button>
             </div>
           </div>
@@ -269,7 +350,7 @@ export default function Index() {
         </div>
       )}
 
-      {/* Add Form Modal */}
+      {/* Add Form */}
       {showForm && (
         <div
           className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/60 backdrop-blur-sm animate-fade-in"
@@ -280,59 +361,73 @@ export default function Index() {
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex items-center justify-between mb-5">
-              <h2 className="text-base font-bold text-foreground">Новая запись</h2>
+              <h2 className="text-base font-bold text-foreground">Новая запись ДСЕ</h2>
               <button onClick={() => setShowForm(false)} className="text-muted-foreground hover:text-foreground transition-colors">
                 <Icon name="X" size={20} />
               </button>
             </div>
 
             <div className="space-y-3">
-              <div>
-                <label className="text-xs font-semibold text-muted-foreground mb-1.5 block">Название *</label>
-                <input
-                  type="text"
-                  placeholder="Введите название"
-                  value={form.title}
-                  onChange={(e) => setForm({ ...form, title: e.target.value })}
-                  className="w-full bg-muted border border-border rounded-xl px-4 py-2.5 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all"
-                />
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="text-xs font-semibold text-muted-foreground mb-1.5 block">Номер *</label>
+                  <input
+                    type="text"
+                    placeholder="001"
+                    value={form.number}
+                    onChange={(e) => setForm({ ...form, number: e.target.value })}
+                    className="w-full bg-muted border border-border rounded-xl px-3 py-2.5 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all font-mono"
+                  />
+                </div>
+                <div>
+                  <label className="text-xs font-semibold text-muted-foreground mb-1.5 block">Обозначение ДСЕ</label>
+                  <input
+                    type="text"
+                    placeholder="ДСЕ-001.00.00"
+                    value={form.designation}
+                    onChange={(e) => setForm({ ...form, designation: e.target.value })}
+                    className="w-full bg-muted border border-border rounded-xl px-3 py-2.5 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all font-mono"
+                  />
+                </div>
               </div>
 
               <div>
-                <label className="text-xs font-semibold text-muted-foreground mb-1.5 block">Описание</label>
+                <label className="text-xs font-semibold text-muted-foreground mb-1.5 block">Наименование ДСЕ *</label>
                 <input
                   type="text"
-                  placeholder="Дополнительная информация"
-                  value={form.subtitle}
-                  onChange={(e) => setForm({ ...form, subtitle: e.target.value })}
-                  className="w-full bg-muted border border-border rounded-xl px-4 py-2.5 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all"
+                  placeholder="Например: Корпус редуктора"
+                  value={form.name}
+                  onChange={(e) => setForm({ ...form, name: e.target.value })}
+                  className="w-full bg-muted border border-border rounded-xl px-3 py-2.5 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all"
                 />
               </div>
 
-              <div>
-                <label className="text-xs font-semibold text-muted-foreground mb-1.5 block">Категория</label>
-                <select
-                  value={form.category}
-                  onChange={(e) => setForm({ ...form, category: e.target.value })}
-                  className="w-full bg-muted border border-border rounded-xl px-4 py-2.5 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all appearance-none cursor-pointer"
-                >
-                  {CATEGORIES.filter((c) => c !== "Все").map((c) => (
-                    <option key={c} value={c}>{c}</option>
-                  ))}
-                </select>
-              </div>
-
-              <div>
-                <label className="text-xs font-semibold text-muted-foreground mb-1.5 block">
-                  Теги <span className="font-normal">(через запятую)</span>
-                </label>
-                <input
-                  type="text"
-                  placeholder="Важное, Срочно, VIP..."
-                  value={form.tags}
-                  onChange={(e) => setForm({ ...form, tags: e.target.value })}
-                  className="w-full bg-muted border border-border rounded-xl px-4 py-2.5 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all"
-                />
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="text-xs font-semibold text-muted-foreground mb-1.5 block">Разряд (1–8)</label>
+                  <select
+                    value={form.grade}
+                    onChange={(e) => setForm({ ...form, grade: e.target.value === "" ? "" : Number(e.target.value) })}
+                    className="w-full bg-muted border border-border rounded-xl px-3 py-2.5 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all appearance-none cursor-pointer"
+                  >
+                    <option value="">— не указан</option>
+                    {[1,2,3,4,5,6,7,8].map((g) => (
+                      <option key={g} value={g}>{g} разряд</option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="text-xs font-semibold text-muted-foreground mb-1.5 block">Норма часы</label>
+                  <input
+                    type="number"
+                    min="0"
+                    step="0.25"
+                    placeholder="0.00"
+                    value={form.hours}
+                    onChange={(e) => setForm({ ...form, hours: e.target.value === "" ? "" : Number(e.target.value) })}
+                    className="w-full bg-muted border border-border rounded-xl px-3 py-2.5 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all font-mono"
+                  />
+                </div>
               </div>
             </div>
 
@@ -345,7 +440,7 @@ export default function Index() {
               </button>
               <button
                 onClick={handleAdd}
-                disabled={!form.title.trim()}
+                disabled={!form.number.trim() || !form.name.trim()}
                 className="flex-1 bg-primary text-primary-foreground rounded-xl py-2.5 text-sm font-semibold hover:opacity-90 disabled:opacity-40 disabled:cursor-not-allowed transition-all"
               >
                 Добавить
