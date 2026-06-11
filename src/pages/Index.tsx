@@ -1,4 +1,5 @@
 import { useState, useMemo, useEffect } from "react";
+import * as XLSX from "xlsx";
 import Icon from "@/components/ui/icon";
 
 const API_URL = "https://functions.poehali.dev/90d46e9e-47f1-43d8-a601-c29c489e8aa1";
@@ -62,6 +63,22 @@ export default function Index() {
 
   const [sortKey, setSortKey] = useState<SortKey>("id");
   const [sortDir, setSortDir] = useState<SortDir>("desc");
+
+  function handleExport() {
+    const rows = filtered.map((r) => ({
+      "Номер": r.number,
+      "Обозначение ДСЕ": r.designation ?? "",
+      "Наименование ДСЕ": r.name,
+      "Разряд": r.grade ?? "",
+      "Норма часы": r.hours ?? "",
+      "Дата": formatDate(r.work_date),
+      "Наряд": r.order_num ?? "",
+    }));
+    const ws = XLSX.utils.json_to_sheet(rows);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "ДСЕ");
+    XLSX.writeFile(wb, "dse_records.xlsx");
+  }
 
   async function loadRecords(s = search, df = dateFrom, dt = dateTo) {
     setLoading(true);
@@ -158,13 +175,24 @@ export default function Index() {
               <h1 className="text-lg font-bold text-foreground leading-tight">ДСЕ — Нормирование</h1>
               <p className="text-xs text-muted-foreground mt-0.5">{records.length} записей</p>
             </div>
-            <button
-              onClick={() => setShowForm(true)}
-              className="flex items-center gap-1.5 bg-primary text-primary-foreground rounded-xl px-3.5 py-2 text-sm font-semibold hover:opacity-90 active:scale-95 transition-all"
-            >
-              <Icon name="Plus" size={15} />
-              Добавить
-            </button>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={handleExport}
+                disabled={filtered.length === 0}
+                className="flex items-center gap-1.5 bg-muted border border-border text-foreground rounded-xl px-3.5 py-2 text-sm font-semibold hover:bg-secondary disabled:opacity-40 disabled:cursor-not-allowed transition-all"
+                title="Экспорт в Excel"
+              >
+                <Icon name="Download" size={15} />
+                Excel
+              </button>
+              <button
+                onClick={() => setShowForm(true)}
+                className="flex items-center gap-1.5 bg-primary text-primary-foreground rounded-xl px-3.5 py-2 text-sm font-semibold hover:opacity-90 active:scale-95 transition-all"
+              >
+                <Icon name="Plus" size={15} />
+                Добавить
+              </button>
+            </div>
           </div>
 
           {/* Filters */}
