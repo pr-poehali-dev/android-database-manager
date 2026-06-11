@@ -1,7 +1,15 @@
 import json
 import os
+from decimal import Decimal
 import psycopg2
 from psycopg2.extras import RealDictCursor
+
+
+class DecimalEncoder(json.JSONEncoder):
+    def default(self, obj):
+        if isinstance(obj, Decimal):
+            return float(obj)
+        return super().default(obj)
 
 SCHEMA = "t_p76073717_android_database_man"
 
@@ -74,15 +82,15 @@ def handle_get(event):
     cur.close()
     conn.close()
 
-    return {"statusCode": 200, "headers": CORS, "body": json.dumps(rows, ensure_ascii=False)}
+    return {"statusCode": 200, "headers": CORS, "body": json.dumps(rows, ensure_ascii=False, cls=DecimalEncoder)}
 
 
 def handle_post(event):
     body = json.loads(event.get("body") or "{}")
     number = body.get("number", "").strip()
     name = body.get("name", "").strip()
-    if not number or not name:
-        return {"statusCode": 400, "headers": CORS, "body": json.dumps({"error": "number и name обязательны"})}
+    if not name:
+        return {"statusCode": 400, "headers": CORS, "body": json.dumps({"error": "name обязателен"})}
 
     designation = body.get("designation", "").strip() or None
     grade = body.get("grade") or None
@@ -109,7 +117,7 @@ def handle_post(event):
     cur.close()
     conn.close()
 
-    return {"statusCode": 201, "headers": CORS, "body": json.dumps(row, ensure_ascii=False)}
+    return {"statusCode": 201, "headers": CORS, "body": json.dumps(row, ensure_ascii=False, cls=DecimalEncoder)}
 
 
 def handle_delete(event):
