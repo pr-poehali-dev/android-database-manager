@@ -16,7 +16,6 @@ interface DSERecord {
 }
 
 const EMPTY_FORM = {
-  number: "",
   designation: "",
   name: "",
   grade: "",
@@ -66,7 +65,6 @@ export default function Index() {
 
   function handleExport() {
     const rows = filtered.map((r) => ({
-      "Номер": r.number,
       "Обозначение ДСЕ": r.designation ?? "",
       "Наименование ДСЕ": r.name,
       "Разряд": r.grade ?? "",
@@ -117,14 +115,14 @@ export default function Index() {
   }
 
   async function handleAdd() {
-    if (!form.number.trim() || !form.name.trim()) return;
+    if (!form.name.trim()) return;
     setSaving(true);
     try {
       const res = await fetch(API_URL, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          number: form.number.trim(),
+          number: "",
           designation: form.designation.trim() || null,
           name: form.name.trim(),
           grade: form.grade ? Number(form.grade) : null,
@@ -278,7 +276,6 @@ export default function Index() {
             <thead className="bg-background border-b border-border">
               <tr>
                 {([
-                  { key: "number",      label: "№",              align: "text-center" },
                   { key: "designation", label: "Обозначение ДСЕ", align: "text-left" },
                   { key: "name",        label: "Наименование ДСЕ", align: "text-left" },
                   { key: "grade",       label: "Разряд",          align: "text-center" },
@@ -308,7 +305,6 @@ export default function Index() {
                   className="border-b border-border/50 cursor-pointer hover:bg-card transition-colors animate-fade-in group"
                   style={{ animationDelay: `${i * 20}ms` }}
                 >
-                  <td className="px-3 py-3 text-center text-muted-foreground font-mono text-xs">{r.number}</td>
                   <td className="px-3 py-3 font-medium text-xs font-mono whitespace-nowrap text-foreground">
                     {r.designation || <span className="text-muted-foreground/40">—</span>}
                   </td>
@@ -350,7 +346,6 @@ export default function Index() {
           <div className="bg-card border border-border rounded-t-3xl sm:rounded-2xl w-full max-w-md p-6 animate-slide-up" onClick={(e) => e.stopPropagation()}>
             <div className="flex items-center justify-between mb-4">
               <div className="flex items-center gap-2">
-                <span className="font-mono text-xs text-muted-foreground bg-muted rounded-lg px-2 py-1">№{detailRecord.number}</span>
                 {detailRecord.grade != null && (
                   <span className={`inline-flex items-center justify-center w-7 h-7 rounded-lg text-xs font-bold ${GRADE_COLOR[detailRecord.grade] ?? "bg-muted text-muted-foreground"}`}>
                     {detailRecord.grade}
@@ -429,19 +424,11 @@ export default function Index() {
             </div>
 
             <div className="space-y-3">
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="text-xs font-semibold text-muted-foreground mb-1.5 block">Номер *</label>
-                  <input type="text" placeholder="001" value={form.number}
-                    onChange={(e) => setForm({ ...form, number: e.target.value })}
-                    className="w-full bg-muted border border-border rounded-xl px-3 py-2.5 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all font-mono" />
-                </div>
-                <div>
-                  <label className="text-xs font-semibold text-muted-foreground mb-1.5 block">Обозначение ДСЕ</label>
-                  <input type="text" placeholder="ДСЕ-001.00.00" value={form.designation}
-                    onChange={(e) => setForm({ ...form, designation: e.target.value })}
-                    className="w-full bg-muted border border-border rounded-xl px-3 py-2.5 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all font-mono" />
-                </div>
+              <div>
+                <label className="text-xs font-semibold text-muted-foreground mb-1.5 block">Обозначение ДСЕ</label>
+                <input type="text" placeholder="ДСЕ-001.00.00" value={form.designation}
+                  onChange={(e) => setForm({ ...form, designation: e.target.value })}
+                  className="w-full bg-muted border border-border rounded-xl px-3 py-2.5 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all font-mono" />
               </div>
 
               <div>
@@ -491,7 +478,7 @@ export default function Index() {
               </button>
               <button
                 onClick={handleAdd}
-                disabled={!form.number.trim() || !form.name.trim() || saving}
+                disabled={!form.name.trim() || saving}
                 className="flex-1 bg-primary text-primary-foreground rounded-xl py-2.5 text-sm font-semibold hover:opacity-90 disabled:opacity-40 disabled:cursor-not-allowed transition-all"
               >
                 {saving ? "Сохранение..." : "Добавить"}
