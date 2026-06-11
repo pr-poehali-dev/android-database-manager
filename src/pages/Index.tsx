@@ -88,7 +88,7 @@ export default function Index() {
       if (dt) params.set("date_to", dt);
       const res = await fetch(`${API_URL}?${params.toString()}`);
       const data = await res.json();
-      setRecords(data);
+      setRecords(Array.isArray(data) ? data : []);
     } catch {
       setError("Не удалось загрузить данные");
     } finally {
